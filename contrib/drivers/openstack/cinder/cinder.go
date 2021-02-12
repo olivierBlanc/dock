@@ -71,6 +71,7 @@ type AuthOptions struct {
 	EnableEncrypted  bool   `yaml:"EnableEncrypted,omitempty"`
 	TenantID         string `yaml:"tenantId,omitempty"`
 	TenantName       string `yaml:"tenantName,omitempty"`
+	CAPEM            string `yaml:"CAPEM,omitempty"`
 }
 
 // CinderConfig
@@ -113,6 +114,8 @@ func (opts ListPoolOpts) ToStoragePoolsListQuery() (string, error) {
 func (d *Driver) Setup() error {
 	// Read cinder config file
 	d.conf = &CinderConfig{}
+
+	log.Info("Cinder config : ", d.conf)
 	p := config.CONF.OsdsDock.Backends.Cinder.ConfigPath
 	if "" == p {
 		p = defaultConfPath
@@ -139,9 +142,11 @@ func (d *Driver) Setup() error {
 		Password:         pwdCiphertext,
 		TenantID:         d.conf.TenantID,
 		TenantName:       d.conf.TenantName,
+		AdditionalCAPEM:  d.conf.CAPEM,
 	}
 
 	if d.conf.NoAuth {
+		log.Info("Config noAuth")
 		provider, err := noauth.NewClient(opts)
 		if err != nil {
 			log.Error("When get no authentication options:", err)
@@ -162,7 +167,7 @@ func (d *Driver) Setup() error {
 			return err
 		}
 
-		d.blockStoragev2, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{})
+		d.blockStoragev2, err = openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{})
 		if err != nil {
 			log.Error("When get block storage session:", err)
 			return err
@@ -434,9 +439,11 @@ func ExtractStoragePools(p pagination.Page) ([]StoragePool, error) {
 
 // ListPools
 func (d *Driver) ListPools() ([]*model.StoragePoolSpec, error) {
-	log.Info("Starting list pools in cinder drivers.")
+	log.Info("Starting list pools in cinder drivers.", d)
 	opts := ListPoolOpts{Detail: true}
 
+	log.Info("pools options : ", opts)	
+	log.Info("block storage : ", d.blockStoragev2)	
 	pages, err := schedulerstats.List(d.blockStoragev2, opts).AllPages()
 	if err != nil {
 		log.Error("Cannot list storage pools:", err)
