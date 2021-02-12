@@ -90,7 +90,10 @@ type AuthOptions struct {
 	ApplicationCredentialID     string `json:"-"`
 	ApplicationCredentialName   string `json:"-"`
 	ApplicationCredentialSecret string `json:"-"`
+
+	AdditionalCAPEM             string `json:"-"`
 }
+
 
 // AuthScope allows a created token to be limited to a specific domain or project.
 type AuthScope struct {
